@@ -24,13 +24,13 @@ export class WeatherService {
     }
 
     // Real API call
-    return this.http.get<any>(`${this.API_URL}?q=${location}&appid=${this.API_KEY}&units=metric`).pipe(
+    return this.http.get<any>(`${this.API_URL}?q=${location}&appid=${this.API_KEY}&units=imperial`).pipe(
       map(response => ({
         location: response.name,
         temperature: response.main.temp,
         condition: response.weather[0].main,
         humidity: response.main.humidity,
-        windSpeed: response.wind?.speed ? response.wind.speed * 3.6 : 0, // Convert m/s to km/h
+        windSpeed: response.wind?.speed || 0, // Already in mph with imperial units
         description: response.weather[0].description
       })),
       catchError(error => {
@@ -47,16 +47,16 @@ export class WeatherService {
     
     return [
       {
-        id: 'temp-above-20',
-        label: 'Temperature Above 20°C',
-        odds: temp > 20 ? 1.5 : 2.5,
-        description: `Bet that temperature will be above 20°C (Current: ${temp}°C)`
+        id: 'temp-above-68',
+        label: 'Temperature Above 68°F',
+        odds: temp > 68 ? 1.5 : 2.5,
+        description: `Bet that temperature will be above 68°F (Current: ${temp}°F)`
       },
       {
-        id: 'temp-below-15',
-        label: 'Temperature Below 15°C',
-        odds: temp < 15 ? 1.5 : 2.5,
-        description: `Bet that temperature will be below 15°C (Current: ${temp}°C)`
+        id: 'temp-below-59',
+        label: 'Temperature Below 59°F',
+        odds: temp < 59 ? 1.5 : 2.5,
+        description: `Bet that temperature will be below 59°F (Current: ${temp}°F)`
       },
       {
         id: 'rain',
@@ -72,9 +72,9 @@ export class WeatherService {
       },
       {
         id: 'windy',
-        label: 'Wind Speed Above 15 km/h',
-        odds: weatherData.windSpeed > 15 ? 1.6 : 2.2,
-        description: `Bet that wind speed will exceed 15 km/h (Current: ${weatherData.windSpeed} km/h)`
+        label: 'Wind Speed Above 10 mph',
+        odds: weatherData.windSpeed > 10 ? 1.6 : 2.2,
+        description: `Bet that wind speed will exceed 10 mph (Current: ${weatherData.windSpeed} mph)`
       },
       {
         id: 'humidity-high',
@@ -94,24 +94,24 @@ export class WeatherService {
     
     const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
     const randomDescription = descriptions[Math.floor(Math.random() * descriptions.length)];
-    const baseTemp = 15 + Math.random() * 15; // 15-30°C
+    const baseTemp = 59 + Math.random() * 27; // 59-86°F (equivalent to 15-30°C)
     
     return {
       location,
       temperature: Math.round(baseTemp * 10) / 10,
       condition: randomCondition,
       humidity: Math.round(40 + Math.random() * 50),
-      windSpeed: Math.round((5 + Math.random() * 20) * 10) / 10,
+      windSpeed: Math.round((3 + Math.random() * 12) * 10) / 10, // 3-15 mph
       description: randomDescription
     };
   }
 
   resolveBet(betOption: BetOption, weatherData: WeatherData): boolean {
     switch (betOption.id) {
-      case 'temp-above-20':
-        return weatherData.temperature > 20;
-      case 'temp-below-15':
-        return weatherData.temperature < 15;
+      case 'temp-above-68':
+        return weatherData.temperature > 68;
+      case 'temp-below-59':
+        return weatherData.temperature < 59;
       case 'rain':
         return weatherData.condition.toLowerCase().includes('rain') || 
                weatherData.description.toLowerCase().includes('rain');
@@ -119,7 +119,7 @@ export class WeatherService {
         return weatherData.condition.toLowerCase().includes('clear') || 
                weatherData.description.toLowerCase().includes('clear');
       case 'windy':
-        return weatherData.windSpeed > 15;
+        return weatherData.windSpeed > 10;
       case 'humidity-high':
         return weatherData.humidity > 70;
       default:

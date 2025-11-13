@@ -26,7 +26,7 @@
       <div *ngIf="weatherData && !loading" class="weather-card">
         <h2 class="weather-location">{{ weatherData.location }}</h2>
         <div class="weather-main">
-          <div class="temperature">{{ weatherData.temperature }}°C</div>
+          <div class="temperature">{{ weatherData.temperature }}°F</div>
           <div class="condition">{{ weatherData.description }}</div>
         </div>
         <div class="weather-details">
@@ -36,7 +36,7 @@
           </div>
           <div class="detail-item">
             <span class="detail-label">Wind Speed</span>
-            <span class="detail-value">{{ weatherData.windSpeed }} km/h</span>
+            <span class="detail-value">{{ weatherData.windSpeed }} mph</span>
           </div>
           <div class="detail-item">
             <span class="detail-label">Condition</span>

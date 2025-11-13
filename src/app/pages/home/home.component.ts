@@ -8,7 +8,7 @@ import { WeatherData } from '../../models/weather.model';
   styleUrls: ['./home.component.scss']
 })
 export class HomeComponent implements OnInit {
-  location: string = 'London';
+  location: string = 'Athens,OH,US';
   weatherData: WeatherData | null = null;
   loading: boolean = false;
   error: string | null = null;
