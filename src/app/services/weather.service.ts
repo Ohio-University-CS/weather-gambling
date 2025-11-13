@@ -11,6 +11,7 @@ import { environment } from '../../environments/environment';
 export class WeatherService {
   private readonly API_KEY = environment.weatherApiKey;
   private readonly API_URL = environment.weatherApiUrl;
+  private readonly FORECAST_API_URL = 'https://api.openweathermap.org/data/2.5/forecast';
 
   constructor(private http: HttpClient) {}
 
@@ -45,46 +46,90 @@ export class WeatherService {
     );
   }
 
-  getBetOptions(weatherData: WeatherData): BetOption[] {
-    const temp = weatherData.temperature;
-    const condition = weatherData.condition.toLowerCase();
+  getForecastForDay(location: string, targetDate: Date): Observable<WeatherData> {
+    // Use mock data if API key is 'demo', otherwise use real API
+    if (this.API_KEY === 'demo') {
+      return of(this.generateMockWeatherData(location)).pipe(
+        delay(500),
+        map(data => data)
+      );
+    }
+
+    // Real API call - get 5-day forecast
+    return this.http.get<any>(`${this.FORECAST_API_URL}?q=${location}&appid=${this.API_KEY}&units=imperial`).pipe(
+      map(response => {
+        // Find the forecast closest to the target date
+        const targetTime = targetDate.getTime();
+        let closestForecast = response.list[0];
+        let minDiff = Math.abs(new Date(closestForecast.dt * 1000).getTime() - targetTime);
+
+        for (const forecast of response.list) {
+          const forecastTime = new Date(forecast.dt * 1000).getTime();
+          const diff = Math.abs(forecastTime - targetTime);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestForecast = forecast;
+          }
+        }
+
+        return {
+          location: response.city.name,
+          temperature: closestForecast.main.temp,
+          condition: closestForecast.weather[0].main,
+          humidity: closestForecast.main.humidity,
+          windSpeed: closestForecast.wind?.speed || 0,
+          description: closestForecast.weather[0].description
+        };
+      }),
+      catchError(error => {
+        console.error('Forecast API error:', error);
+        // If it's an API key error (401), throw it so the component can handle it
+        if (error.status === 401 || (error.error && error.error.cod === 401)) {
+          throw error;
+        }
+        // Fallback to mock data on other errors
+        return of(this.generateMockWeatherData(location));
+      })
+    );
+  }
+
+  getBetOptions(weatherData: WeatherData, baselineTemp: number = 65): BetOption[] {
+    const forecastTemp = weatherData.temperature;
+    const tempDiff = forecastTemp - baselineTemp;
+    
+    // Calculate odds based on how likely higher/lower is
+    // If forecast is much higher than baseline, "Higher" has lower odds (more likely)
+    // If forecast is much lower than baseline, "Lower" has lower odds (more likely)
+    
+    // Normalize the difference to calculate probability
+    // Assuming typical range is -20 to +20 degrees from baseline
+    const normalizedDiff = Math.max(-1, Math.min(1, tempDiff / 20));
+    
+    // Probability that it will be higher (0 to 1)
+    const probHigher = 0.5 + (normalizedDiff * 0.3); // Range from 0.2 to 0.8
+    const probLower = 1 - probHigher;
+    
+    // Convert probability to odds (odds = 1 / probability, with house edge)
+    const houseEdge = 0.1; // 10% house edge
+    const oddsHigher = Math.max(1.1, Math.min(3.0, (1 / probHigher) * (1 - houseEdge)));
+    const oddsLower = Math.max(1.1, Math.min(3.0, (1 / probLower) * (1 - houseEdge)));
+    
+    // Round to 2 decimal places
+    const roundedOddsHigher = Math.round(oddsHigher * 100) / 100;
+    const roundedOddsLower = Math.round(oddsLower * 100) / 100;
     
     return [
       {
-        id: 'temp-above-68',
-        label: 'Temperature Above 68°F',
-        odds: temp > 68 ? 1.5 : 2.5,
-        description: `Bet that temperature will be above 68°F (Current: ${temp}°F)`
+        id: 'temp-higher',
+        label: 'Higher',
+        odds: roundedOddsHigher,
+        description: `Bet that temperature will be higher than ${baselineTemp}°F (Forecast: ${forecastTemp.toFixed(1)}°F)`
       },
       {
-        id: 'temp-below-59',
-        label: 'Temperature Below 59°F',
-        odds: temp < 59 ? 1.5 : 2.5,
-        description: `Bet that temperature will be below 59°F (Current: ${temp}°F)`
-      },
-      {
-        id: 'rain',
-        label: 'Rain Expected',
-        odds: condition.includes('rain') ? 1.3 : 3.0,
-        description: `Bet that it will rain (Current: ${weatherData.description})`
-      },
-      {
-        id: 'sunny',
-        label: 'Sunny Weather',
-        odds: condition.includes('clear') || condition.includes('sun') ? 1.4 : 2.8,
-        description: `Bet for sunny weather (Current: ${weatherData.description})`
-      },
-      {
-        id: 'windy',
-        label: 'Wind Speed Above 10 mph',
-        odds: weatherData.windSpeed > 10 ? 1.6 : 2.2,
-        description: `Bet that wind speed will exceed 10 mph (Current: ${weatherData.windSpeed} mph)`
-      },
-      {
-        id: 'humidity-high',
-        label: 'High Humidity (>70%)',
-        odds: weatherData.humidity > 70 ? 1.5 : 2.3,
-        description: `Bet for high humidity (Current: ${weatherData.humidity}%)`
+        id: 'temp-lower',
+        label: 'Lower',
+        odds: roundedOddsLower,
+        description: `Bet that temperature will be lower than ${baselineTemp}°F (Forecast: ${forecastTemp.toFixed(1)}°F)`
       }
     ];
   }
@@ -110,8 +155,13 @@ export class WeatherService {
     };
   }
 
-  resolveBet(betOption: BetOption, weatherData: WeatherData): boolean {
+  resolveBet(betOption: BetOption, weatherData: WeatherData, baselineTemp: number = 65): boolean {
     switch (betOption.id) {
+      case 'temp-higher':
+        return weatherData.temperature > baselineTemp;
+      case 'temp-lower':
+        return weatherData.temperature < baselineTemp;
+      // Keep old cases for backward compatibility
       case 'temp-above-68':
         return weatherData.temperature > 68;
       case 'temp-below-59':
