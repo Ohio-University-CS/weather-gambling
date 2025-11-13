@@ -17,7 +17,7 @@ export class WalletDisplayComponent implements OnInit {
   ngOnInit(): void {}
 
   resetWallet(): void {
-    if (confirm('Are you sure you want to reset your wallet to $200?')) {
+    if (confirm('Are you sure you want to reset your wallet to $200 and clear all stats?')) {
       this.walletService.reset();
     }
   }
