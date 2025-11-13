@@ -98,6 +98,8 @@
             type="number" 
             id="betAmount"
             [(ngModel)]="betAmount" 
+            (input)="onModalAmountChange($event)"
+            (keydown)="preventMinus($event)"
             min="1"
             [max]="walletService.getBalance()"
             class="amount-input"
