@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  weatherApiKey: '68dfda7ad05661479ea57b950f6bc3af',
+  weatherApiKey: '61fab2a72f29bc2d2a895b1ed3253ae4',
   weatherApiUrl: 'https://api.openweathermap.org/data/2.5/weather'
 };
 
