@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { WeatherService } from '../../services/weather.service';
+import { PreferencesService } from '../../services/preferences.service';
 import { WeatherData } from '../../models/weather.model';
 
 @Component({
@@ -13,9 +14,13 @@ export class HomeComponent implements OnInit {
   loading: boolean = false;
   error: string | null = null;
 
-  constructor(private weatherService: WeatherService) {}
+  constructor(
+    private weatherService: WeatherService,
+    private preferencesService: PreferencesService
+  ) {}
 
   ngOnInit(): void {
+    this.location = this.preferencesService.getLocation();
     this.loadWeatherData();
   }
 
@@ -34,7 +39,11 @@ export class HomeComponent implements OnInit {
         this.loading = false;
       },
       error: (err) => {
-        this.error = 'Failed to load weather data. Please try again.';
+        if (err.status === 401 || (err.error && err.error.cod === 401)) {
+          this.error = 'Invalid API key. Please check your OpenWeather API key configuration.';
+        } else {
+          this.error = 'Failed to load weather data. Please try again.';
+        }
         this.loading = false;
         console.error(err);
       }
@@ -42,6 +51,7 @@ export class HomeComponent implements OnInit {
   }
 
   onLocationChange(): void {
+    this.preferencesService.setLocation(this.location);
     this.loadWeatherData();
   }
 }

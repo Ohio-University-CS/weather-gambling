@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { WeatherService } from '../../services/weather.service';
 import { WalletService } from '../../services/wallet.service';
 import { BettingService } from '../../services/betting.service';
+import { PreferencesService } from '../../services/preferences.service';
 import { WeatherData, BetOption, Bet } from '../../models/weather.model';
 
 interface DayBet {
@@ -30,10 +31,12 @@ export class BettingComponent implements OnInit {
   constructor(
     public walletService: WalletService,
     private weatherService: WeatherService,
-    private bettingService: BettingService
+    private bettingService: BettingService,
+    private preferencesService: PreferencesService
   ) {}
 
   ngOnInit(): void {
+    this.location = this.preferencesService.getLocation();
     this.initializeDays();
     this.loadWeatherForAllDays();
   }
@@ -73,6 +76,7 @@ export class BettingComponent implements OnInit {
   }
 
   onLocationChange(): void {
+    this.preferencesService.setLocation(this.location);
     this.loadWeatherForAllDays();
   }
 
