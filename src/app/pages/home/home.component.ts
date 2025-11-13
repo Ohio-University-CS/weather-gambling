@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { WeatherService } from '../../services/weather.service';
 import { PreferencesService } from '../../services/preferences.service';
-import { WeatherData } from '../../models/weather.model';
+import { BettingService } from '../../services/betting.service';
+import { WeatherData, Bet } from '../../models/weather.model';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-home',
@@ -13,15 +15,21 @@ export class HomeComponent implements OnInit {
   weatherData: WeatherData | null = null;
   loading: boolean = false;
   error: string | null = null;
+  bets$: Observable<Bet[]>;
 
   constructor(
     private weatherService: WeatherService,
-    private preferencesService: PreferencesService
-  ) {}
+    private preferencesService: PreferencesService,
+    private bettingService: BettingService
+  ) {
+    this.bets$ = this.bettingService.bets$;
+  }
 
   ngOnInit(): void {
     this.location = this.preferencesService.getLocation();
     this.loadWeatherData();
+    // Check for pending bets (also runs in AppComponent, but good to check here too)
+    this.bettingService.checkAndResolvePendingBets();
   }
 
   loadWeatherData(): void {
@@ -53,6 +61,23 @@ export class HomeComponent implements OnInit {
   onLocationChange(): void {
     this.preferencesService.setLocation(this.location);
     this.loadWeatherData();
+  }
+
+
+  getBetStatusClass(bet: Bet): string {
+    if (!bet.resolved) {
+      return 'pending';
+    }
+    return bet.won ? 'won' : 'lost';
+  }
+
+  isBetDue(bet: Bet): boolean {
+    if (bet.resolved) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const targetDate = new Date(bet.targetDate);
+    targetDate.setHours(0, 0, 0, 0);
+    return targetDate.getTime() <= today.getTime();
   }
 }
 

@@ -20,6 +20,8 @@ export interface Bet {
   amount: number;
   timestamp: Date;
   location: string;
+  targetDate: Date;
+  baselineTemp: number;
   resolved: boolean;
   won?: boolean;
   payout?: number;

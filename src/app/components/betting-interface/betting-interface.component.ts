@@ -62,12 +62,15 @@ export class BettingInterfaceComponent implements OnInit {
     }
 
     if (this.walletService.deduct(this.betAmount)) {
+      const baselineTemp = 65; // Default baseline used in getBetOptions
       const bet: Bet = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
         option: this.selectedOption,
         amount: this.betAmount,
         timestamp: new Date(),
         location: this.weatherData.location,
+        targetDate: new Date(), // Current date for betting-interface (current weather bets)
+        baselineTemp: baselineTemp,
         resolved: false
       };
 
@@ -87,20 +90,26 @@ export class BettingInterfaceComponent implements OnInit {
   }
 
   resolveBet(bet: Bet): void {
-    // Use default baseline of 65°F (same as getBetOptions default)
-    // This should match the baseline used when creating the bet options
-    const baselineTemp = 65;
-    const won = this.weatherService.resolveBet(bet.option, this.weatherData, baselineTemp);
-    const payout = won ? bet.amount * bet.option.odds : 0;
-    
-    this.bettingService.resolveBet(bet.id, won, payout);
-    
-    if (won) {
-      this.walletService.add(payout);
-      this.showMessage(`You won! Payout: $${payout.toFixed(2)}`, 'success');
-    } else {
-      this.showMessage(`You lost. Better luck next time!`, 'error');
-    }
+    // Fetch actual current weather for today's bets
+    this.weatherService.getWeatherData(bet.location).subscribe({
+      next: (weatherData) => {
+        const won = this.weatherService.resolveBet(bet.option, weatherData, bet.baselineTemp);
+        const payout = won ? bet.amount * bet.option.odds : 0;
+        
+        this.bettingService.resolveBet(bet.id, won, payout);
+        
+        if (won) {
+          this.walletService.add(payout);
+          this.showMessage(`You won! Payout: $${payout.toFixed(2)}`, 'success');
+        } else {
+          this.showMessage(`You lost. Better luck next time!`, 'error');
+        }
+      },
+      error: (error) => {
+        console.error('Error fetching weather for bet resolution:', error);
+        this.showMessage('Error resolving bet. Please try again later.', 'error');
+      }
+    });
   }
 
   showMessage(text: string, type: 'success' | 'error'): void {
