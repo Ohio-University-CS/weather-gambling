@@ -151,22 +151,35 @@ export class BettingComponent implements OnInit {
     }
 
     if (this.walletService.deduct(this.betAmount)) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const targetDate = new Date(this.selectedDay.date);
+      targetDate.setHours(0, 0, 0, 0);
+      const isToday = targetDate.getTime() === today.getTime();
+
       const bet: Bet = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
         option: this.selectedOption,
         amount: this.betAmount,
         timestamp: new Date(),
         location: this.location,
+        targetDate: this.selectedDay.date,
+        baselineTemp: this.baselineTemp,
         resolved: false
       };
 
       this.bettingService.placeBet(bet);
       
-      setTimeout(() => {
-        this.resolveBet(bet);
-      }, 2000);
-
-      this.showMessage(`Bet placed! Resolving in 2 seconds...`, 'success');
+      if (isToday) {
+        // Resolve immediately for today's bets
+        setTimeout(() => {
+          this.resolveBet(bet);
+        }, 2000);
+        this.showMessage(`Bet placed! Resolving in 2 seconds...`, 'success');
+      } else {
+        // For future bets, just save them
+        this.showMessage(`Bet placed for ${this.selectedDay.day}! It will resolve on ${this.selectedDay.date.toLocaleDateString()}`, 'success');
+      }
       
       setTimeout(() => {
         this.closeModal();
@@ -177,18 +190,52 @@ export class BettingComponent implements OnInit {
   }
 
   resolveBet(bet: Bet): void {
-    if (!this.selectedDay?.weatherData) return;
-    
-    const won = this.weatherService.resolveBet(bet.option, this.selectedDay.weatherData, this.baselineTemp);
-    const payout = won ? bet.amount * bet.option.odds : 0;
-    
-    this.bettingService.resolveBet(bet.id, won, payout);
-    
-    if (won) {
-      this.walletService.add(payout);
-      this.showMessage(`You won! Payout: $${payout.toFixed(2)}`, 'success');
+    // For today's bets, use current weather; for future bets, use actual weather on that date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const targetDate = new Date(bet.targetDate);
+    targetDate.setHours(0, 0, 0, 0);
+    const isToday = targetDate.getTime() === today.getTime();
+
+    if (isToday) {
+      // Use current weather for today's bets
+      this.weatherService.getWeatherData(bet.location).subscribe({
+        next: (weatherData) => {
+          const won = this.weatherService.resolveBet(bet.option, weatherData, bet.baselineTemp);
+          const payout = won ? bet.amount * bet.option.odds : 0;
+          
+          this.bettingService.resolveBet(bet.id, won, payout);
+          
+          if (won) {
+            this.walletService.add(payout);
+            this.showMessage(`You won! Payout: $${payout.toFixed(2)}`, 'success');
+          } else {
+            this.showMessage(`You lost. Better luck next time!`, 'error');
+          }
+        },
+        error: (error) => {
+          console.error('Error fetching weather for bet resolution:', error);
+          this.showMessage('Error resolving bet. Please try again later.', 'error');
+        }
+      });
     } else {
-      this.showMessage(`You lost. Better luck next time!`, 'error');
+      // For future bets, this will be called by the betting service when the date arrives
+      // Use actual weather API for the target date
+      this.weatherService.getWeatherData(bet.location).subscribe({
+        next: (weatherData) => {
+          const won = this.weatherService.resolveBet(bet.option, weatherData, bet.baselineTemp);
+          const payout = won ? bet.amount * bet.option.odds : 0;
+          
+          this.bettingService.resolveBet(bet.id, won, payout);
+          
+          if (won) {
+            this.walletService.add(payout);
+          }
+        },
+        error: (error) => {
+          console.error('Error fetching weather for bet resolution:', error);
+        }
+      });
     }
   }
 

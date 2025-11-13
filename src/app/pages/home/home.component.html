@@ -67,5 +67,58 @@
     <div class="spinner"></div>
     <p>Loading weather data...</p>
   </div>
+
+  <div class="bets-section">
+    <h2 class="section-title">Your Bets</h2>
+    <ng-container *ngIf="bets$ | async as bets">
+      <div *ngIf="bets.length === 0" class="no-bets">
+        <p>No bets placed yet. Go to the Betting page to place your first bet!</p>
+      </div>
+      <div *ngIf="bets.length > 0" class="bets-list">
+        <div 
+          *ngFor="let bet of bets" 
+        class="bet-item"
+        [ngClass]="getBetStatusClass(bet)"
+      >
+        <div class="bet-main">
+          <div class="bet-info">
+            <h3 class="bet-label">{{ bet.option.label }}</h3>
+            <p class="bet-description">{{ bet.option.description }}</p>
+            <p class="bet-location">{{ bet.location }}</p>
+            <p class="bet-date">Target Date: {{ bet.targetDate | date:'MMM d, y' }}</p>
+            <p class="bet-time">Placed: {{ bet.timestamp | date:'short' }}</p>
+          </div>
+          <div class="bet-amounts">
+            <div class="amount-item">
+              <span class="amount-label">Bet:</span>
+              <span class="amount-value">${{ bet.amount | number:'1.2-2' }}</span>
+            </div>
+            <div class="amount-item" *ngIf="bet.resolved">
+              <span class="amount-label">{{ bet.won ? 'Won' : 'Lost' }}:</span>
+              <span class="amount-value" [ngClass]="bet.won ? 'won' : 'lost'">
+                {{ bet.won ? '+' : '-' }}${{ bet.won ? (bet.payout || 0) : bet.amount | number:'1.2-2' }}
+              </span>
+            </div>
+            <div class="amount-item" *ngIf="!bet.resolved">
+              <span class="amount-label">Potential:</span>
+              <span class="amount-value potential">
+                ${{ (bet.amount * bet.option.odds) | number:'1.2-2' }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="bet-status">
+          <span class="status-badge" [ngClass]="{
+            'status-won': bet.resolved && bet.won,
+            'status-lost': bet.resolved && !bet.won,
+            'status-pending': !bet.resolved
+          }">
+            {{ bet.resolved ? (bet.won ? 'Won' : 'Lost') : (isBetDue(bet) ? 'Resolving...' : 'Pending') }}
+          </span>
+        </div>
+      </div>
+      </div>
+    </ng-container>
+  </div>
 </div>
 
