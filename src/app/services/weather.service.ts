@@ -35,7 +35,11 @@ export class WeatherService {
       })),
       catchError(error => {
         console.error('Weather API error:', error);
-        // Fallback to mock data on error
+        // If it's an API key error (401), throw it so the component can handle it
+        if (error.status === 401 || (error.error && error.error.cod === 401)) {
+          throw error;
+        }
+        // Fallback to mock data on other errors
         return of(this.generateMockWeatherData(location));
       })
     );

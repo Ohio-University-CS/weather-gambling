@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { WalletService } from '../../services/wallet.service';
 import { WeatherService } from '../../services/weather.service';
 import { BettingService } from '../../services/betting.service';
+import { PreferencesService } from '../../services/preferences.service';
 import { WeatherData, BetOption } from '../../models/weather.model';
 
 @Component({
@@ -19,10 +20,12 @@ export class DashboardComponent implements OnInit {
   constructor(
     public walletService: WalletService,
     private weatherService: WeatherService,
-    private bettingService: BettingService
+    private bettingService: BettingService,
+    private preferencesService: PreferencesService
   ) {}
 
   ngOnInit(): void {
+    this.location = this.preferencesService.getLocation();
     this.loadWeatherData();
   }
 
@@ -50,6 +53,7 @@ export class DashboardComponent implements OnInit {
   }
 
   onLocationChange(): void {
+    this.preferencesService.setLocation(this.location);
     this.loadWeatherData();
   }
 }
