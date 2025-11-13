@@ -27,6 +27,7 @@ export class BettingComponent implements OnInit {
   showModal: boolean = false;
   modalMessage: string = '';
   modalType: 'success' | 'error' | '' = '';
+  baselineTemp: number = 65;
 
   constructor(
     public walletService: WalletService,
@@ -60,18 +61,43 @@ export class BettingComponent implements OnInit {
   }
 
   loadWeatherForAllDays(): void {
-    this.days.forEach(day => {
-      day.loading = true;
-      this.weatherService.getWeatherData(this.location).subscribe({
-        next: (data) => {
-          day.weatherData = data;
-          day.betOptions = this.weatherService.getBetOptions(data);
-          day.loading = false;
-        },
-        error: () => {
-          day.loading = false;
-        }
-      });
+    // Get current weather to establish baseline temperature
+    this.weatherService.getWeatherData(this.location).subscribe({
+      next: (currentData) => {
+        this.baselineTemp = currentData.temperature;
+        
+        // Load forecast for each day
+        this.days.forEach(day => {
+          day.loading = true;
+          this.weatherService.getForecastForDay(this.location, day.date).subscribe({
+            next: (data) => {
+              day.weatherData = data;
+              day.betOptions = this.weatherService.getBetOptions(data, this.baselineTemp);
+              day.loading = false;
+            },
+            error: () => {
+              day.loading = false;
+            }
+          });
+        });
+      },
+      error: () => {
+        // If current weather fails, use default baseline
+        this.baselineTemp = 65;
+        this.days.forEach(day => {
+          day.loading = true;
+          this.weatherService.getForecastForDay(this.location, day.date).subscribe({
+            next: (data) => {
+              day.weatherData = data;
+              day.betOptions = this.weatherService.getBetOptions(data, this.baselineTemp);
+              day.loading = false;
+            },
+            error: () => {
+              day.loading = false;
+            }
+          });
+        });
+      }
     });
   }
 
@@ -153,7 +179,7 @@ export class BettingComponent implements OnInit {
   resolveBet(bet: Bet): void {
     if (!this.selectedDay?.weatherData) return;
     
-    const won = this.weatherService.resolveBet(bet.option, this.selectedDay.weatherData);
+    const won = this.weatherService.resolveBet(bet.option, this.selectedDay.weatherData, this.baselineTemp);
     const payout = won ? bet.amount * bet.option.odds : 0;
     
     this.bettingService.resolveBet(bet.id, won, payout);

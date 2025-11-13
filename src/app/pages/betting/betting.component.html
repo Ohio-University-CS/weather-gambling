@@ -31,8 +31,9 @@
         
         <div class="table-cell odds-cell">
           <div *ngIf="!day.loading && day.betOptions.length > 0" class="odds-list">
-            <div *ngFor="let option of day.betOptions.slice(0, 3)" class="odds-item">
-              {{ option.odds }}x
+            <div *ngFor="let option of day.betOptions" class="odds-item">
+              <span class="odds-label">{{ option.label }}:</span>
+              <span class="odds-value">{{ option.odds }}x</span>
             </div>
           </div>
           <div *ngIf="day.loading" class="loading">Loading...</div>
@@ -55,12 +56,12 @@
 
         <div class="table-cell bet-cell">
           <button 
-            *ngFor="let option of day.betOptions.slice(0, 2)"
+            *ngFor="let option of day.betOptions"
             (click)="openBetModal(day, option)"
             class="bet-btn"
             [disabled]="day.loading"
           >
-            Bet
+            {{ option.label }}
           </button>
           <div *ngIf="day.loading" class="loading">Loading...</div>
         </div>

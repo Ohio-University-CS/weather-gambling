@@ -87,7 +87,10 @@ export class BettingInterfaceComponent implements OnInit {
   }
 
   resolveBet(bet: Bet): void {
-    const won = this.weatherService.resolveBet(bet.option, this.weatherData);
+    // Use default baseline of 65°F (same as getBetOptions default)
+    // This should match the baseline used when creating the bet options
+    const baselineTemp = 65;
+    const won = this.weatherService.resolveBet(bet.option, this.weatherData, baselineTemp);
     const payout = won ? bet.amount * bet.option.odds : 0;
     
     this.bettingService.resolveBet(bet.id, won, payout);
