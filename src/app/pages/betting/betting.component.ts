@@ -123,6 +123,34 @@ export class BettingComponent implements OnInit {
     this.modalType = '';
   }
 
+  onModalAmountChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    // Parse numeric value from the input; if invalid, default to 0
+    const val = Number(input.value);
+    if (isNaN(val)) {
+      this.betAmount = 0;
+      return;
+    }
+
+    // Disallow negative values by clamping to minimum 1
+    if (val < 1) {
+      this.betAmount = 1;
+      // Reflect the clamped value back to the input element so the UI updates immediately
+      input.value = String(this.betAmount);
+      return;
+    }
+
+    // Otherwise accept the parsed value
+    this.betAmount = val;
+  }
+
+  preventMinus(event: KeyboardEvent): void {
+    // Prevent entering a minus sign which would allow negative numbers
+    if (event.key === '-' || event.key === 'e' || event.key === '+' ) {
+      event.preventDefault();
+    }
+  }
+
   calculatePayout(): void {
     // This will be used in the template
   }
